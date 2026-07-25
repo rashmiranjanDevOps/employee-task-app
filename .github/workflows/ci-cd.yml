@@ -33,7 +33,7 @@
 #       matrix:
 #         app: [backend, frontend]
 #     steps:
-#       - uses: actions/checkout@v4
+#       - uses: actions/checkout@v7
 
 #       - uses: actions/setup-node@v4
 #         with:
@@ -51,7 +51,7 @@
 #   secrets-scan:
 #     runs-on: ubuntu-latest
 #     steps:
-#       - uses: actions/checkout@v4
+#       - uses: actions/checkout@v7
 #         with:
 #           fetch-depth: 0   # gitleaks needs full history, not just the latest commit
 
@@ -69,7 +69,7 @@
 #       image_tag: ${{ steps.tag.outputs.image_tag }}
 #       environment: ${{ steps.tag.outputs.environment }}
 #     steps:
-#       - uses: actions/checkout@v4
+#       - uses: actions/checkout@v7
 
 #       - name: Determine environment and image tag
 #         id: tag
@@ -104,12 +104,12 @@
 #     runs-on: ubuntu-latest
 #     steps:
 #       - name: Checkout app repo (for the shared scripts)
-#         uses: actions/checkout@v4
+#         uses: actions/checkout@v7
 #         with:
 #           path: app
 
 #       - name: Checkout GitOps repo
-#         uses: actions/checkout@v4
+#         uses: actions/checkout@v7
 #         with:
 #           repository: ${{ env.GITOPS_REPO }}
 #           # A fine-grained PAT with contents:write on ONLY the GitOps repo.
@@ -179,7 +179,7 @@ jobs:
         app: [backend, frontend]
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - uses: actions/setup-node@v4
         with:
@@ -205,7 +205,7 @@ jobs:
   runs-on: ubuntu-latest
 
   steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v7
       with:
         fetch-depth: 0
 
@@ -237,7 +237,7 @@ jobs:
       environment: ${{ steps.tag.outputs.environment }}
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Determine environment and image tag
         id: tag
@@ -280,12 +280,12 @@ jobs:
 
     steps:
       - name: Checkout app repo (for the shared scripts)
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           path: app
 
       - name: Checkout GitOps repo
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           repository: ${{ env.GITOPS_REPO }}
           token: ${{ secrets.GITOPS_PAT }}
