@@ -246,6 +246,16 @@ jobs:
             echo "image_tag=dev-$(git rev-parse --short HEAD)" >> "$GITHUB_OUTPUT"
           fi
 
+      # ------------------ TEMP DEBUG ------------------
+      - name: Debug GitHub Context
+        run: |
+          echo "Repository: $GITHUB_REPOSITORY"
+          echo "Repository Owner: $GITHUB_REPOSITORY_OWNER"
+          echo "Ref: $GITHUB_REF"
+          echo "Actor: $GITHUB_ACTOR"
+          echo "Workflow: $GITHUB_WORKFLOW"
+      # ------------------------------------------------
+
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -270,7 +280,6 @@ jobs:
             CI \
             "${{ steps.tag.outputs.environment }}" \
             "build/scan/push failed — see the Actions log"
-
   ###########################################################################
   # GitOps Update
   ###########################################################################
