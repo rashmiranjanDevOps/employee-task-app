@@ -1,0 +1,13 @@
+apiVersion: 1
+
+providers:
+  - name: 'Employee Task Dashboards'
+    orgId: 1
+    folder: 'Employee Task'
+    type: file
+    disableDeletion: false
+    updateIntervalSeconds: 30
+    allowUiUpdates: true
+    options:
+      path: /var/lib/grafana/dashboards
+      foldersFromFilesStructure: false

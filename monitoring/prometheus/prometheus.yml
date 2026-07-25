@@ -1,0 +1,26 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets: [alertmanager:9093]
+
+rule_files:
+  - /etc/prometheus/alert.rules.yml
+
+scrape_configs:
+  # ─── Prometheus self-monitoring ───────────────────────────────────────────
+  - job_name: prometheus
+    static_configs:
+      - targets: [localhost:9090]
+
+  # ─── Task Tracker Backend ─────────────────────────────────────────────────
+  # The backend exposes its own metrics at /metrics via prom-client
+  # (see backend/src/utils/metrics.js). Every alert and every panel in the
+  # Grafana "Application Overview" dashboard reads from this one job.
+  - job_name: employee-task-backend
+    metrics_path: /metrics
+    static_configs:
+      - targets: [employee-task-backend:5000]

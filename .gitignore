@@ -1,0 +1,35 @@
+# Dependencies
+node_modules/
+
+# Env files with real secrets - only .example files are committed
+.env
+.env.*
+!.env.example
+!.env.*.example
+
+# Build output
+dist/
+build/
+coverage/
+
+# Terraform
+**/.terraform/
+*.tfstate
+*.tfstate.*
+*.tfplan
+crash.log
+crash.*.log
+# Note: .terraform.lock.hcl is intentionally NOT ignored - it should be
+# committed so everyone applies with the same provider versions.
+
+# Logs
+*.log
+npm-debug.log*
+
+# OS / editor
+.DS_Store
+.vscode/
+.idea/
+
+# Test output
+junit.xml

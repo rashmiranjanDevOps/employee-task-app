@@ -1,0 +1,35 @@
+groups:
+  - name: employee-task-application
+    interval: 30s
+    rules:
+      - alert: HighErrorRate
+        expr: |
+          sum(rate(task_tracker_http_requests_total{status_code=~"5.."}[5m])) /
+          sum(rate(task_tracker_http_requests_total[5m])) > 0.05
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "High HTTP error rate on the API"
+          description: "Error rate is {{ $value | humanizePercentage }} over the last 5 minutes (threshold: 5%)."
+
+      - alert: SlowAPIResponse
+        expr: |
+          histogram_quantile(0.99,
+            rate(task_tracker_http_request_duration_seconds_bucket[5m])
+          ) > 2
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Slow API response (p99 > 2s)"
+          description: "p99 latency is {{ $value | humanizeDuration }}."
+
+      - alert: APIDown
+        expr: up{job="employee-task-backend"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "API is DOWN"
+          description: "Prometheus has not been able to scrape the backend for more than 1 minute."
