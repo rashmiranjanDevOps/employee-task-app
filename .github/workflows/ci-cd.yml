@@ -56,7 +56,7 @@
 #           fetch-depth: 0   # gitleaks needs full history, not just the latest commit
 
 #       - name: Scan for committed secrets (gitleaks)
-#         uses: gitleaks/gitleaks-action@v2
+#         uses: gitleaks/gitleaks-action@v3
 #         env:
 #           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -217,7 +217,7 @@ jobs:
         cat .gitleaks.toml
 
     - name: Scan for committed secrets (gitleaks)
-      uses: gitleaks/gitleaks-action@v2
+      uses: gitleaks/gitleaks-action@v3
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
