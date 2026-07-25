@@ -1,0 +1,48 @@
+# Shared defaults, common to both environments. Each ArgoCD Application in
+# employee-task-gitops layers an environment-specific file on top
+# (environments/dev/values.yaml or environments/prod/values.yaml) — see
+# that repo's apps/dev-application.yaml / prod-application.yaml. Helm
+# merges them in the order listed there, so a key set in both places takes
+# the environment file's value.
+#
+# CI updates backend.image.tag / frontend.image.tag in the target
+# environment's values file on every deploy (see .github/workflows/ci-cd.yml
+# + scripts/ci/update-image-tag.sh). Everything else is set once by hand —
+# see INSTALL.md.
+
+image:
+  registry: "" # set once during setup — terraform output ecr_repository_urls, minus the repo name
+  pullPolicy: IfNotPresent
+
+# Name of the Kubernetes Secret this chart reads DB_HOST/DB_USER/DB_PASSWORD/
+# JWT_SECRET/JWT_REFRESH_SECRET from. Created by Terraform
+# (terraform/main.tf's kubernetes_secret.app resource), NOT by this chart —
+# see ARCHITECTURE.md for why secret values are never templated into Helm.
+existingSecretName: employee-task-secrets
+
+backend:
+  image:
+    repository: employee-task-backend
+    tag: "unset" # set by CI on every deploy
+  port: 5000
+
+frontend:
+  image:
+    repository: employee-task-frontend
+    tag: "unset"
+  port: 8080
+
+ingress:
+  enabled: true
+  class: alb
+  annotations:
+    alb.ingress.kubernetes.io/scheme: internet-facing
+    alb.ingress.kubernetes.io/target-type: ip
+    # listen-ports and ssl-redirect are NOT set here — they're templated
+    # conditionally in templates/ingress.yaml based on whether
+    # tls.certificateArn (below) is actually set. Setting them
+    # unconditionally here would make the Ingress request an HTTPS
+    # listener even when there's no certificate to attach to it, which the
+    # AWS Load Balancer Controller rejects outright.
+  tls:
+    certificateArn: "" # set once during setup — terraform output acm_certificate_arn (global)

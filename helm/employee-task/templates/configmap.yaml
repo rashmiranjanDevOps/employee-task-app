@@ -1,0 +1,21 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Release.Name }}-config
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "employee-task.labels" . | nindent 4 }}
+data:
+  NODE_ENV: {{ .Values.backend.env.NODE_ENV | quote }}
+  PORT: {{ .Values.backend.port | quote }}
+  LOG_LEVEL: {{ .Values.backend.env.LOG_LEVEL | quote }}
+  JWT_EXPIRES_IN: {{ .Values.backend.env.JWT_EXPIRES_IN | quote }}
+  JWT_REFRESH_EXPIRES_IN: {{ .Values.backend.env.JWT_REFRESH_EXPIRES_IN | quote }}
+  RATE_LIMIT_MAX: {{ .Values.backend.env.RATE_LIMIT_MAX | quote }}
+  DB_POOL_MAX: {{ .Values.backend.env.DB_POOL_MAX | quote }}
+  DB_POOL_MIN: {{ .Values.backend.env.DB_POOL_MIN | quote }}
+  # Derives from ingress.hosts.frontend so CORS can never point at a
+  # different environment's frontend than the one this release actually
+  # serves.
+  ALLOWED_ORIGINS: "https://{{ .Values.ingress.hosts.frontend }}"
+  APP_VERSION: {{ .Values.backend.image.tag | quote }}

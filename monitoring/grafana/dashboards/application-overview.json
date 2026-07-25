@@ -1,0 +1,112 @@
+{
+  "title": "Employee Task Tracker - Application Overview",
+  "uid": "employee-task-app-overview",
+  "tags": ["employee-task", "application"],
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "30s",
+  "time": { "from": "now-6h", "to": "now" },
+  "panels": [
+    {
+      "id": 1,
+      "title": "Request Rate (req/s)",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+      "targets": [
+        {
+          "expr": "sum(rate(task_tracker_http_requests_total[5m])) by (route)",
+          "legendFormat": "{{route}}"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "title": "Error Rate (%)",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+      "targets": [
+        {
+          "expr": "sum(rate(task_tracker_http_requests_total{status_code=~\"5..\"}[5m])) / sum(rate(task_tracker_http_requests_total[5m])) * 100",
+          "legendFormat": "Error %"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": {
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 2 },
+              { "color": "red", "value": 5 }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": 3,
+      "title": "Response Time (p50 / p95 / p99)",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 },
+      "targets": [
+        { "expr": "histogram_quantile(0.50, rate(task_tracker_http_request_duration_seconds_bucket[5m]))", "legendFormat": "p50" },
+        { "expr": "histogram_quantile(0.95, rate(task_tracker_http_request_duration_seconds_bucket[5m]))", "legendFormat": "p95" },
+        { "expr": "histogram_quantile(0.99, rate(task_tracker_http_request_duration_seconds_bucket[5m]))", "legendFormat": "p99" }
+      ]
+    },
+    {
+      "id": 4,
+      "title": "Active Pods",
+      "type": "stat",
+      "gridPos": { "h": 8, "w": 6, "x": 12, "y": 8 },
+      "targets": [
+        { "expr": "count(up{job=\"employee-task-backend\"} == 1)" }
+      ]
+    },
+    {
+      "id": 5,
+      "title": "Auth Attempts",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 6, "x": 18, "y": 8 },
+      "targets": [
+        { "expr": "sum(rate(task_tracker_auth_attempts_total[5m])) by (type, result)", "legendFormat": "{{type}} - {{result}}" }
+      ]
+    },
+    {
+      "id": 6,
+      "title": "Node.js Memory Usage (Heap)",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 16 },
+      "targets": [
+        { "expr": "task_tracker_nodejs_heap_size_used_bytes / 1024 / 1024", "legendFormat": "Heap Used (MB) - {{pod}}" }
+      ]
+    },
+    {
+      "id": 7,
+      "title": "Node.js Event Loop Lag",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 16 },
+      "targets": [
+        { "expr": "task_tracker_nodejs_eventloop_lag_seconds", "legendFormat": "{{pod}}" }
+      ]
+    },
+    {
+      "id": 8,
+      "title": "Active Tasks by Status",
+      "type": "piechart",
+      "gridPos": { "h": 8, "w": 8, "x": 0, "y": 24 },
+      "targets": [
+        { "expr": "task_tracker_active_tasks_total", "legendFormat": "{{status}}" }
+      ]
+    },
+    {
+      "id": 9,
+      "title": "DB Query Duration (p95)",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 16, "x": 8, "y": 24 },
+      "targets": [
+        { "expr": "histogram_quantile(0.95, rate(task_tracker_db_query_duration_seconds_bucket[5m])) by (operation)", "legendFormat": "{{operation}}" }
+      ]
+    }
+  ]
+}
