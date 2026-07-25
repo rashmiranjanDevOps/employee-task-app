@@ -137,15 +137,6 @@
 
 name: CI/CD
 
-# develop -> deploys to dev. main -> deploys to prod. Anything else (feature
-# branches, PRs) only runs the test job — it never touches AWS.
-#
-# The actual build/test/scan/push/deploy LOGIC lives in scripts/ci/*.sh and
-# scripts/notify-slack.sh, shared with Jenkinsfile — this workflow is mostly
-# "authenticate, then call the same scripts Jenkins calls." See
-# ARCHITECTURE.md for why: so the two pipelines can't quietly drift apart on
-# what "passing CI" or "deploying" actually means.
-
 on:
   push:
     branches: [develop, main]
@@ -153,7 +144,7 @@ on:
   pull_request:
     branches: [develop, main]
 
-  workflow_dispatch: {}
+  workflow_dispatch:
 
 permissions:
   id-token: write
@@ -187,46 +178,51 @@ jobs:
           cache: npm
           cache-dependency-path: ${{ matrix.app }}/package-lock.json
 
-      # CHANGED: execute using bash
       - name: Run checks
         run: bash ./scripts/ci/run-checks.sh ${{ matrix.app }}
 
-      # CHANGED: execute using bash + don't fail if Slack fails
       - name: Notify Slack on failure
         if: failure()
         continue-on-error: true
-        run: bash ./scripts/notify-slack.sh failure CI "${{ matrix.app }}" "run-checks.sh failed — see the Actions log"
+        run: |
+          bash ./scripts/notify-slack.sh \
+            failure \
+            CI \
+            "${{ matrix.app }}" \
+            "run-checks.sh failed — see the Actions log"
 
   ###########################################################################
   # Secret Scan
   ###########################################################################
 
   secrets-scan:
-  runs-on: ubuntu-latest
+    runs-on: ubuntu-latest
 
-  steps:
-    - uses: actions/checkout@v4
-      with:
-        fetch-depth: 0
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
-    - name: Debug checkout
-      run: |
-        pwd
-        ls -la
-        echo "========== .gitleaks.toml =========="
-        cat .gitleaks.toml
+      - name: Debug checkout
+        run: |
+          pwd
+          ls -la
+          echo "========== .gitleaks.toml =========="
+          cat .gitleaks.toml
 
-    - name: Scan for committed secrets (gitleaks)
-      uses: gitleaks/gitleaks-action@v2
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Scan for committed secrets (gitleaks)
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   ###########################################################################
   # Build / Scan / Push
   ###########################################################################
 
   build-and-push:
-    needs: [test, secrets-scan]
+    needs:
+      - test
+      - secrets-scan
 
     if: github.event_name == 'push'
 
@@ -250,7 +246,7 @@ jobs:
             echo "image_tag=dev-$(git rev-parse --short HEAD)" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Configure AWS credentials (OIDC — no static access keys)
+      - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
@@ -259,15 +255,21 @@ jobs:
       - name: Log in to Amazon ECR
         uses: aws-actions/amazon-ecr-login@v2
 
-      # CHANGED: execute using bash
       - name: Build, scan, and push images
-        run: bash ./scripts/ci/build-scan-push.sh "${ECR_REGISTRY}" "${{ steps.tag.outputs.image_tag }}"
+        run: |
+          bash ./scripts/ci/build-scan-push.sh \
+            "${ECR_REGISTRY}" \
+            "${{ steps.tag.outputs.image_tag }}"
 
-      # CHANGED: execute using bash + don't fail if Slack fails
       - name: Notify Slack on failure
         if: failure()
         continue-on-error: true
-        run: bash ./scripts/notify-slack.sh failure CI "${{ steps.tag.outputs.environment }}" "build/scan/push failed — see the Actions log"
+        run: |
+          bash ./scripts/notify-slack.sh \
+            failure \
+            CI \
+            "${{ steps.tag.outputs.environment }}" \
+            "build/scan/push failed — see the Actions log"
 
   ###########################################################################
   # GitOps Update
@@ -279,7 +281,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout app repo (for the shared scripts)
+      - name: Checkout app repo
         uses: actions/checkout@v4
         with:
           path: app
@@ -291,7 +293,6 @@ jobs:
           token: ${{ secrets.GITOPS_PAT }}
           path: gitops
 
-      # CHANGED: execute using bash
       - name: Deploy to GitOps repo
         run: |
           bash app/scripts/ci/deploy-to-gitops.sh \
@@ -299,7 +300,6 @@ jobs:
             "${{ needs.build-and-push.outputs.environment }}" \
             "${{ needs.build-and-push.outputs.image_tag }}"
 
-      # CHANGED: execute using bash + don't fail if Slack fails
       - name: Notify Slack
         if: always()
         continue-on-error: true
@@ -307,7 +307,15 @@ jobs:
           cd app
 
           if [[ "${{ job.status }}" == "success" ]]; then
-            bash ./scripts/notify-slack.sh success Deploy "${{ needs.build-and-push.outputs.environment }}" "image ${{ needs.build-and-push.outputs.image_tag }}"
+            bash ./scripts/notify-slack.sh \
+              success \
+              Deploy \
+              "${{ needs.build-and-push.outputs.environment }}" \
+              "image ${{ needs.build-and-push.outputs.image_tag }}"
           else
-            bash ./scripts/notify-slack.sh failure Deploy "${{ needs.build-and-push.outputs.environment }}" "GitOps update failed — see the Actions log"
+            bash ./scripts/notify-slack.sh \
+              failure \
+              Deploy \
+              "${{ needs.build-and-push.outputs.environment }}" \
+              "GitOps update failed — see the Actions log"
           fi
