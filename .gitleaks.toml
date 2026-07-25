@@ -1,6 +1,7 @@
 title = "Employee Task App Gitleaks Config"
 
-[allowlist]
+[[allowlists]]
+description = "Allow placeholder/example environment file"
 paths = [
   '''backend/\.env\.development\.example$'''
 ]
