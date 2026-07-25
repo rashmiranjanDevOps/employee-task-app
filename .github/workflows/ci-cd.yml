@@ -202,17 +202,24 @@ jobs:
   ###########################################################################
 
   secrets-scan:
-    runs-on: ubuntu-latest
+  runs-on: ubuntu-latest
 
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
+  steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
 
-      - name: Scan for committed secrets (gitleaks)
-        uses: gitleaks/gitleaks-action@v2
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    - name: Debug checkout
+      run: |
+        pwd
+        ls -la
+        echo "========== .gitleaks.toml =========="
+        cat .gitleaks.toml
+
+    - name: Scan for committed secrets (gitleaks)
+      uses: gitleaks/gitleaks-action@v2
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   ###########################################################################
   # Build / Scan / Push
