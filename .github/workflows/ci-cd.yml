@@ -6,32 +6,45 @@
 # "authenticate, then call the same scripts Jenkins calls." See
 # ARCHITECTURE.md for why: so the two pipelines can't quietly drift apart on
 # what "passing CI" or "deploying" actually means.
+
 name: CI/CD
 
 on:
   push:
-    branches: [develop, main]
+    branches:
+      - develop
+      - main
+
   pull_request:
-    branches: [develop, main]
+    branches:
+      - develop
+      - main
+
   workflow_dispatch: {}
 
 permissions:
-  id-token: write   # required for aws-actions/configure-aws-credentials to use OIDC
+  id-token: write
   contents: read
 
 env:
   AWS_REGION: ${{ vars.AWS_REGION }}
-  ECR_REGISTRY: ${{ vars.ECR_REGISTRY }}       # e.g. 123456789012.dkr.ecr.us-east-1.amazonaws.com
-  GITOPS_REPO: ${{ vars.GITOPS_REPO }}         # e.g. rashmiranjandevops/employee-task-gitops
-  SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}   # optional - notify-slack.sh no-ops if unset
+  ECR_REGISTRY: ${{ vars.ECR_REGISTRY }}
+  GITOPS_REPO: ${{ vars.GITOPS_REPO }}
+  SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
 
 jobs:
-  # ─── Lint + unit test + audit both apps ────────────────────────────────────
+  # ────────────────────────────────────────────────────────────────
+  # Lint + Unit Tests
+  # ────────────────────────────────────────────────────────────────
   test:
     runs-on: ubuntu-latest
+
     strategy:
       matrix:
-        app: [backend, frontend]
+        app:
+          - backend
+          - frontend
+
     steps:
       - uses: actions/checkout@v4
 
@@ -42,57 +55,59 @@ jobs:
           cache-dependency-path: ${{ matrix.app }}/package-lock.json
 
       - name: Run checks
-        run: bash ./scripts/ci/run-checks.sh ${{ matrix.app }}
+        run: |
+          bash ./scripts/ci/run-checks.sh ${{ matrix.app }}
 
       - name: Notify Slack on failure
         if: failure()
         continue-on-error: true
         run: |
           bash ./scripts/notify-slack.sh \
-            failure CI "${{ matrix.app }}" "run-checks.sh failed — see the Actions log"
+            failure CI "${{ matrix.app }}" \
+            "run-checks.sh failed — see the Actions log"
 
-  # ─── Catch accidentally-committed secrets before they ever merge ──────────
+  # ────────────────────────────────────────────────────────────────
+  # Secret Scan
+  # ────────────────────────────────────────────────────────────────
   secrets-scan:
     runs-on: ubuntu-latest
+
     steps:
       - uses: actions/checkout@v4
         with:
-          fetch-depth: 0   # gitleaks needs full history, not just the latest commit
+          fetch-depth: 0
 
-      # FIX: the old "Debug checkout" step ran `cat .gitleaks.toml`
-      # unconditionally — if that file doesn't exist at the repo root, `cat`
-      # exits non-zero with no continue-on-error, which fails this ENTIRE
-      # job (and blocks build-and-push, which needs it). A .gitleaks.toml is
-      # optional — gitleaks-action falls back to its default ruleset when
-      # it's absent — so this step should never have been able to fail the
-      # pipeline over a file that's allowed not to exist.
-      - name: Check for a custom gitleaks config (optional, informational only)
+      - name: Check for optional gitleaks config
         run: |
           if [[ -f .gitleaks.toml ]]; then
-            echo "Found .gitleaks.toml — gitleaks will use it."
+            echo "Found .gitleaks.toml"
             cat .gitleaks.toml
           else
-            echo "No .gitleaks.toml at repo root — using gitleaks-action's default ruleset (this is fine)."
+            echo "Using default gitleaks rules."
           fi
 
-      - name: Scan for committed secrets (gitleaks)
+      - name: Scan for committed secrets
         uses: gitleaks/gitleaks-action@v2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          # Only required if this repo belongs to a GitHub ORGANIZATION, not
-          # a personal account — https://gitleaks.io. Leave the secret unset
-          # entirely on a personal account; an empty env var here is fine
-          # either way, gitleaks-action only checks it when it needs to.
           GITLEAKS_LICENSE: ${{ secrets.GITLEAKS_LICENSE }}
 
-  # ─── Build, scan, and push images (only on develop/main, never on PRs) ────
+  # ────────────────────────────────────────────────────────────────
+  # Build, Scan & Push Images
+  # ────────────────────────────────────────────────────────────────
   build-and-push:
-    needs: [test, secrets-scan]
+    needs:
+      - test
+      - secrets-scan
+
     if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+
     runs-on: ubuntu-latest
+
     outputs:
       image_tag: ${{ steps.tag.outputs.image_tag }}
       environment: ${{ steps.tag.outputs.environment }}
+
     steps:
       - uses: actions/checkout@v4
 
@@ -107,32 +122,48 @@ jobs:
             echo "image_tag=dev-$(git rev-parse --short HEAD)" >> "$GITHUB_OUTPUT"
           fi
 
-      # Kept from your debugging — genuinely useful for diagnosing an OIDC
-      # trust-policy mismatch (AccessDenied on the next step) without
-      # needing to re-run the whole job. Harmless to leave in permanently.
-      - name: Debug OIDC token claims
+      # Uncomment only while debugging OIDC issues.
+      #
+      # - name: Debug OIDC token claims
+      #   uses: actions/github-script@v7
+      #   with:
+      #     script: |
+      #       const token = await core.getIDToken('sts.amazonaws.com');
+      #       const payload = JSON.parse(
+      #         Buffer.from(token.split('.')[1], 'base64').toString('utf8')
+      #       );
+      #
+      #       console.log("SUB:", payload.sub);
+      #       console.log("AUD:", payload.aud);
+      #       console.log("REPOSITORY:", payload.repository);
+
+      - name: Debug full OIDC token
         uses: actions/github-script@v7
         with:
           script: |
             const token = await core.getIDToken('sts.amazonaws.com');
-            const payload = JSON.parse(Buffer.from(token.split('.')[1], 'base64').toString('utf8'));
-            console.log("SUB:", payload.sub);
-            console.log("AUD:", payload.aud);
-            console.log("REPOSITORY:", payload.repository);
 
-      - name: Configure AWS credentials (OIDC — no static access keys)
+            const payload = JSON.parse(
+              Buffer.from(token.split('.')[1], 'base64').toString('utf8')
+            );
+
+            console.log(JSON.stringify(payload, null, 2));
+
+      - name: Configure AWS credentials (OIDC)
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
           aws-region: ${{ env.AWS_REGION }}
 
-      - name: Log in to Amazon ECR
+      - name: Login to Amazon ECR
         uses: aws-actions/amazon-ecr-login@v2
 
-      - name: Build, scan, and push images
+      - name: Build, Scan & Push Images
         run: |
           chmod +x ./scripts/ci/build-scan-push.sh
-          ./scripts/ci/build-scan-push.sh "${ECR_REGISTRY}" "${{ steps.tag.outputs.image_tag }}"
+          ./scripts/ci/build-scan-push.sh \
+            "${ECR_REGISTRY}" \
+            "${{ steps.tag.outputs.image_tag }}"
 
       - name: Notify Slack on failure
         if: failure()
@@ -140,28 +171,32 @@ jobs:
         run: |
           chmod +x ./scripts/notify-slack.sh
           ./scripts/notify-slack.sh \
-            failure CI "${{ steps.tag.outputs.environment }}" "build/scan/push failed — see the Actions log"
+            failure CI \
+            "${{ steps.tag.outputs.environment }}" \
+            "build/scan/push failed — see the Actions log"
 
-  # ─── Update the GitOps repo so ArgoCD picks up the release ─────────────────
+  # ────────────────────────────────────────────────────────────────
+  # Update GitOps Repository
+  # ────────────────────────────────────────────────────────────────
   update-gitops:
     needs: build-and-push
+
     runs-on: ubuntu-latest
+
     steps:
-      - name: Checkout app repo (for the shared scripts)
+      - name: Checkout application repository
         uses: actions/checkout@v4
         with:
           path: app
 
-      - name: Checkout GitOps repo
+      - name: Checkout GitOps repository
         uses: actions/checkout@v4
         with:
           repository: ${{ env.GITOPS_REPO }}
-          # A fine-grained PAT with contents:write on ONLY the GitOps repo.
-          # The default GITHUB_TOKEN can't push to a different repository.
           token: ${{ secrets.GITOPS_PAT }}
           path: gitops
 
-      - name: Deploy to GitOps repo
+      - name: Deploy to GitOps repository
         run: |
           bash app/scripts/ci/deploy-to-gitops.sh \
             ./gitops \
@@ -173,14 +208,18 @@ jobs:
         continue-on-error: true
         run: |
           cd app
+
           if [[ "${{ job.status }}" == "success" ]]; then
             bash ./scripts/notify-slack.sh \
-              success Deploy "${{ needs.build-and-push.outputs.environment }}" "image ${{ needs.build-and-push.outputs.image_tag }}"
+              success Deploy \
+              "${{ needs.build-and-push.outputs.environment }}" \
+              "image ${{ needs.build-and-push.outputs.image_tag }}"
           else
             bash ./scripts/notify-slack.sh \
-              failure Deploy "${{ needs.build-and-push.outputs.environment }}" "GitOps update failed — see the Actions log"
+              failure Deploy \
+              "${{ needs.build-and-push.outputs.environment }}" \
+              "GitOps update failed — see the Actions log"
           fi
-
 
 
 
