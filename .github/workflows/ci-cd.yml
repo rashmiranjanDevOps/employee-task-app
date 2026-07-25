@@ -116,10 +116,10 @@ jobs:
         run: |
           if [[ "${{ github.ref_name }}" == "main" ]]; then
             echo "environment=prod" >> "$GITHUB_OUTPUT"
-            echo "image_tag=prod-$(git rev-parse --short HEAD)" >> "$GITHUB_OUTPUT"
+            echo "image_tag=prod-$(git rev-parse --short HEAD)-${{ github.run_number }}" >> "$GITHUB_OUTPUT"
           else
             echo "environment=dev" >> "$GITHUB_OUTPUT"
-            echo "image_tag=dev-$(git rev-parse --short HEAD)" >> "$GITHUB_OUTPUT"
+            echo "image_tag=dev-$(git rev-parse --short HEAD)-${{ github.run_number }}" >> "$GITHUB_OUTPUT"
           fi
 
       # Uncomment only while debugging OIDC issues.
