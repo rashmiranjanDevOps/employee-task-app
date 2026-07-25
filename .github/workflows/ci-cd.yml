@@ -205,6 +205,7 @@ jobs:
 
       - name: Deploy to GitOps repository
         run: |
+          chmod +x app/scripts/ci/*.sh
           bash app/scripts/ci/deploy-to-gitops.sh \
             ./gitops \
             "${{ needs.build-and-push.outputs.environment }}" \
