@@ -1,0 +1,6 @@
+title = "Employee Task App Gitleaks Config"
+
+[allowlist]
+paths = [
+  '''backend/\.env\.development\.example$'''
+]
