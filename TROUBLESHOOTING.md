@@ -153,4 +153,4 @@ Confirm Prometheus is scraping the backend: http://localhost:9090/targets should
 
 ---
 
-If a problem isn't covered here: reproduce it with the smallest possible repro (`docker compose up` locally, or `kubectl` directly against the cluster), and check the specific component's logs before assuming the whole platform is broken. Most failures in a project this size trace back to exactly one misconfigured value, not a systemic issue.
+If a problem isn't covered here: reproduce it with the smallest possible repro (`docker compose up` locally, or `kubectl` directly against the cluster), and check the specific component's logs before assuming the whole platform is broken. Most failures in a project this size trace back to exactly one misconfigured value, not a systemic issue..
