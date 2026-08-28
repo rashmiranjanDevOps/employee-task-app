@@ -32,9 +32,9 @@ curl -s https://checkip.amazonaws.com     # write this down as <YOUR_IP>
 
 ```bash
 mkdir -p ~/projects && cd ~/projects
-git clone https://github.com/rashmiranjan7/employee-task-app.git
-git clone https://github.com/rashmiranjan7/employee-task-gitops.git
-git clone https://github.com/rashmiranjan7/employee-task-infra.git
+git clone https://github.com/rashmiranjanDevOps/employee-task-app.git
+git clone https://github.com/rashmiranjanDevOps/employee-task-gitops.git
+git clone https://github.com/rashmiranjanDevOps/employee-task-infra.git
 ```
 
 ---

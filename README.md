@@ -13,8 +13,8 @@ I split this project into 3 repos on purpose. Each repo has one clear job. A rea
 | Repo | What it does |
 |---|---|
 | **employee-task-app** (this one) | The app code, the Helm chart, and both CI/CD pipelines |
-| [employee-task-infra](https://github.com/rashmiranjan7/employee-task-infra.git) | Terraform. Builds all the AWS infrastructure. |
-| [employee-task-gitops](https://github.com/rashmiranjan7/employee-task-gitops.git) | The ArgoCD file that tells Kubernetes what to run |
+| [employee-task-infra](https://github.com/rashmiranjanDevOps/employee-task-infra.git) | Terraform. Builds all the AWS infrastructure. |
+| [employee-task-gitops](https://github.com/rashmiranjanDevOps/employee-task-gitops.git) | The ArgoCD file that tells Kubernetes what to run |
 
 ## How it all connects
 

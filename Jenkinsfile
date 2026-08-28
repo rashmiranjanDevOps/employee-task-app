@@ -71,7 +71,7 @@ pipeline {
                                            usernameVariable: 'GIT_USER',
                                            passwordVariable: 'GIT_TOKEN')]) {
           sh '''
-            git remote set-url origin https://$GIT_USER:$GIT_TOKEN@github.com/rashmiranjan7/employee-task-app.git
+            git remote set-url origin https://$GIT_USER:$GIT_TOKEN@github.com/rashmiranjanDevOps/employee-task-app.git
             ./scripts/ci/update-image-tag.sh $IMAGE_TAG
           '''
         }
